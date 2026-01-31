@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 export function useAnalyze() {
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [reduceHallucination, setReduceHallucination] = useState(false);
   const { toast } = useToast();
 
   const analyzeClaim = async (claim: string) => {
@@ -23,7 +24,7 @@ export function useAnalyze() {
       const { data, error } = await supabase.functions.invoke<AnalysisResult>(
         "analyze-claim",
         {
-          body: { claim },
+          body: { claim, reduceHallucination },
         }
       );
 
@@ -39,7 +40,7 @@ export function useAnalyze() {
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: "",
+        content: data.summary,
         analysis: data,
         timestamp: new Date(),
       };
@@ -92,5 +93,7 @@ export function useAnalyze() {
     isLoading,
     analyzeClaim,
     clearMessages,
+    reduceHallucination,
+    setReduceHallucination,
   };
 }

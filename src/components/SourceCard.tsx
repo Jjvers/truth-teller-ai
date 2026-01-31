@@ -7,70 +7,77 @@ interface SourceCardProps {
   index: number;
 }
 
-const biasConfig: Record<string, { label: string; className: string }> = {
-  left: {
-    label: "Left-leaning",
-    className: "bg-bias-left/20 text-bias-left border-bias-left/30",
-  },
-  center: {
-    label: "Center",
-    className: "bg-bias-center/20 text-bias-center border-bias-center/30",
-  },
-  right: {
-    label: "Right-leaning",
-    className: "bg-bias-right/20 text-bias-right border-bias-right/30",
-  },
-  "fact-check": {
-    label: "Fact-Check",
-    className: "bg-verdict-fact/20 text-verdict-fact border-verdict-fact/30",
-  },
-  unknown: {
-    label: "Unknown",
-    className: "bg-muted text-muted-foreground border-border",
-  },
+// Map domains to display badges
+const domainBadges: Record<string, { label: string; color: string }> = {
+  "antaranews.com": { label: "ANTARA", color: "bg-[hsl(142_76%_45%)]" },
+  "reuters.com": { label: "REUTERS", color: "bg-[hsl(217_91%_60%)]" },
+  "kompas.com": { label: "KOMPAS", color: "bg-[hsl(0_84%_55%)]" },
+  "tempo.co": { label: "TEMPO", color: "bg-[hsl(45_93%_47%)]" },
+  "detik.com": { label: "DETIK", color: "bg-[hsl(280_70%_50%)]" },
+  "cnnindonesia.com": { label: "CNN ID", color: "bg-[hsl(0_84%_55%)]" },
+  "bbc.com": { label: "BBC", color: "bg-[hsl(0_0%_30%)]" },
+  "apnews.com": { label: "AP", color: "bg-[hsl(217_91%_50%)]" },
 };
 
 export function SourceCard({ source, index }: SourceCardProps) {
-  const biasInfo = biasConfig[source.bias || "unknown"];
-  const domain = new URL(source.url).hostname.replace("www.", "");
+  let domain = "";
+  try {
+    domain = new URL(source.url).hostname.replace("www.", "");
+  } catch {
+    domain = source.url;
+  }
+
+  const badge = Object.entries(domainBadges).find(([key]) => domain.includes(key))?.[1] 
+    || { label: domain.split('.')[0].toUpperCase().slice(0, 8), color: "bg-primary" };
+
+  // Simulated match percentage (in real app, this would come from the backend)
+  const matchPercentage = 100;
 
   return (
     <a
       href={source.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group block p-3 rounded-lg border border-border bg-card/50 hover:bg-card transition-all duration-200 hover:border-primary/50 animate-fade-in"
-      style={{ animationDelay: `${index * 50}ms` }}
+      className="group block p-4 rounded-lg border border-border bg-card hover:bg-muted/50 transition-all duration-200 hover:border-primary/50"
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="flex-shrink-0 w-5 h-5 rounded bg-primary/20 text-primary text-xs font-mono font-bold flex items-center justify-center">
-            {index + 1}
-          </span>
-          <span className="text-xs text-muted-foreground font-mono truncate">
-            {domain}
-          </span>
+      <div className="flex items-start gap-4">
+        {/* Index Number */}
+        <div className="flex-shrink-0 w-7 h-7 rounded-md bg-primary text-primary-foreground text-sm font-bold flex items-center justify-center">
+          {index + 1}
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "source-badge border",
-              biasInfo.className
-            )}
-          >
-            {biasInfo.label}
-          </span>
-          <ExternalLink className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          {/* Source Name & Badge */}
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs text-muted-foreground">{domain}</span>
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "px-2 py-0.5 rounded text-xs font-bold text-white",
+                badge.color
+              )}>
+                {badge.label}
+              </span>
+              <span className="text-xs text-muted-foreground">{matchPercentage}% match</span>
+            </div>
+          </div>
+
+          {/* Title */}
+          <h4 className="font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">
+            {source.title}
+          </h4>
+
+          {/* Snippet */}
+          {source.snippet && (
+            <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+              {source.snippet.slice(0, 200)}...
+            </p>
+          )}
         </div>
+
+        {/* External Link Icon */}
+        <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100" />
       </div>
-      <h4 className="font-medium text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-        {source.title}
-      </h4>
-      {source.snippet && (
-        <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">
-          {source.snippet.slice(0, 150)}...
-        </p>
-      )}
     </a>
   );
 }
