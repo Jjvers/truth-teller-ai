@@ -1,87 +1,128 @@
-import { FileText, BarChart3, Shield, Newspaper } from "lucide-react";
+import { FileText, BarChart3, Shield, Newspaper, ChevronDown } from "lucide-react";
 import type { AnalysisResult } from "@/types/analysis";
 import { VerdictBadge } from "./VerdictBadge";
 import { ConfidenceMeter } from "./ConfidenceMeter";
 import { SourceCard } from "./SourceCard";
 import { BiasSpectrum } from "./BiasSpectrum";
 import { HallucinationWarning } from "./HallucinationWarning";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface AnalysisPanelProps {
   analysis: AnalysisResult;
 }
 
+interface SectionProps {
+  title: string;
+  icon: React.ReactNode;
+  badge?: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function Section({ title, icon, badge, children, defaultOpen = true }: SectionProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <CollapsibleTrigger className="flex items-center justify-between w-full p-4 rounded-lg bg-card border border-border hover:bg-muted/50 transition-colors group">
+        <div className="flex items-center gap-3">
+          <div className="text-primary">{icon}</div>
+          <span className="font-medium text-foreground">{title}</span>
+          {badge && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+              {badge}
+            </span>
+          )}
+        </div>
+        <ChevronDown
+          className={cn(
+            "w-5 h-5 text-muted-foreground transition-transform duration-200",
+            isOpen && "rotate-180"
+          )}
+        />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3 pl-2">
+        <div className="p-4 rounded-lg bg-card/50 border border-border/50">
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export function AnalysisPanel({ analysis }: AnalysisPanelProps) {
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header with Verdict */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
+    <div className="space-y-4 animate-fade-in">
+      {/* Header with Verdict & Confidence */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-lg bg-gradient-to-r from-card to-muted/30 border border-border">
         <VerdictBadge verdict={analysis.verdict} size="lg" />
         <div className="w-full sm:w-48">
           <ConfidenceMeter value={analysis.confidence} size="md" />
         </div>
       </div>
 
-      {/* Summary */}
-      <div className="p-4 rounded-lg bg-card border border-border">
-        <p className="text-foreground font-medium">{analysis.summary}</p>
+      {/* Summary - Always visible */}
+      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+        <p className="text-foreground font-medium leading-relaxed">{analysis.summary}</p>
       </div>
 
-      {/* Tabbed Content */}
-      <Tabs defaultValue="explanation" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 bg-muted/50">
-          <TabsTrigger value="explanation" className="flex items-center gap-2 text-xs sm:text-sm">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Analysis</span>
-          </TabsTrigger>
-          <TabsTrigger value="sources" className="flex items-center gap-2 text-xs sm:text-sm">
-            <Newspaper className="w-4 h-4" />
-            <span className="hidden sm:inline">Sources</span>
-            <span className="text-xs opacity-70">({analysis.sources.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="bias" className="flex items-center gap-2 text-xs sm:text-sm">
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Bias</span>
-          </TabsTrigger>
-          <TabsTrigger value="grounding" className="flex items-center gap-2 text-xs sm:text-sm">
-            <Shield className="w-4 h-4" />
-            <span className="hidden sm:inline">Grounding</span>
-          </TabsTrigger>
-        </TabsList>
+      {/* All Sections in Single Scrollable View */}
+      <div className="space-y-3">
+        {/* Analysis Section */}
+        <Section
+          title="Detailed Analysis"
+          icon={<FileText className="w-5 h-5" />}
+          defaultOpen={true}
+        >
+          <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap text-sm">
+            {analysis.explanation}
+          </p>
+        </Section>
 
-        <TabsContent value="explanation" className="mt-4">
-          <div className="prose prose-sm prose-invert max-w-none">
-            <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-              {analysis.explanation}
-            </p>
+        {/* Sources Section */}
+        <Section
+          title="Sources"
+          icon={<Newspaper className="w-5 h-5" />}
+          badge={`${analysis.sources.length}`}
+          defaultOpen={true}
+        >
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+            {analysis.sources.length > 0 ? (
+              analysis.sources.map((source, index) => (
+                <SourceCard key={source.url} source={source} index={index} />
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                No sources were found for this claim.
+              </p>
+            )}
           </div>
-        </TabsContent>
+        </Section>
 
-        <TabsContent value="sources" className="mt-4">
-          <ScrollArea className="h-[300px] pr-4">
-            <div className="space-y-3">
-              {analysis.sources.length > 0 ? (
-                analysis.sources.map((source, index) => (
-                  <SourceCard key={source.url} source={source} index={index} />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  No sources were found for this claim.
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </TabsContent>
-
-        <TabsContent value="bias" className="mt-4">
+        {/* Bias Analysis Section */}
+        <Section
+          title="Media Bias Analysis"
+          icon={<BarChart3 className="w-5 h-5" />}
+          defaultOpen={true}
+        >
           <BiasSpectrum biasAnalysis={analysis.biasAnalysis} />
-        </TabsContent>
+        </Section>
 
-        <TabsContent value="grounding" className="mt-4">
+        {/* Grounding Check Section */}
+        <Section
+          title="Hallucination Check"
+          icon={<Shield className="w-5 h-5" />}
+          defaultOpen={true}
+        >
           <HallucinationWarning check={analysis.hallucinationCheck} />
-        </TabsContent>
-      </Tabs>
+        </Section>
+      </div>
     </div>
   );
 }
